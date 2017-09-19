@@ -4,9 +4,12 @@ from krinnet import utils
 from krinnet.layers import base
 
 
-class Conv2DLayer(base.BaseLayer):
+class Conv2DLayer(base.BaseHiddenLayer):
     default_w_initializer = tf.contrib.layers.xavier_initializer
     default_b_initializer = .1
+
+    layer_basename = 'conv_layer'
+    n_dimensions = 4
 
     def __init__(self, filter_size, strides=(1, 1, 1, 1), activation=None, layer_name=None,
                  weights_initializer=None, bias_initializer=None, dropout_keep_prob=None,
@@ -32,43 +35,43 @@ class Conv2DLayer(base.BaseLayer):
         self.input_shape = None
         super(Conv2DLayer, self).__init__(layer_name=layer_name)
 
-    def build(self, layer_i, input_tensor):
-        self.layer_name = self.layer_name or 'conv2d_layer_{}'.format(layer_i)
+    def build(self, input_tensor, layer_i=None):
+        input_tensor = self.build_input_tensor_dimensionality(input_tensor)
 
-        with self.scope():
-            input_tensor = self.ensure_input_tensor_dimensionality(input_tensor, 4)
+        self.weights = tf.get_variable(
+            'W', shape=self.filter_size,
+            dtype=tf.float32,
+            initializer=self.weights_initializer)
 
-            self.weights = tf.get_variable(
-                'W', shape=self.filter_size,
-                dtype=tf.float32,
-                initializer=self.weights_initializer)
+        self.bias = tf.get_variable(
+            'b', shape=self.filter_size[-1], dtype=tf.float32,
+            initializer=self.bias_initializer)
 
-            self.bias = tf.get_variable(
-                'b', shape=self.filter_size[-1], dtype=tf.float32,
-                initializer=self.bias_initializer)
+        self.input_shape = tf.stack([tf.shape(input_tensor)[0]] + input_tensor.shape.as_list()[1:])
 
-            self.input_shape = tf.stack([tf.shape(input_tensor)[0]] + input_tensor.shape.as_list()[1:])
-            output = tf.nn.conv2d(
-                input_tensor, self.weights, strides=self.strides, padding='SAME')
+    def apply(self, input_tensor):
+        input_tensor = self.verify_input_tensor_dimensionality(input_tensor)
 
-            output = tf.nn.bias_add(output, self.bias)
+        output = tf.nn.conv2d(
+            input_tensor, self.weights, strides=self.strides, padding='SAME')
 
-            if self.activation:
-                output = self.activation(output)
+        output = tf.nn.bias_add(output, self.bias)
 
-            before_dropout = output
+        if self.activation:
+            output = self.activation(output)
 
-            if self.dropout_keep_prob:
-                self.dropout = tf.placeholder(tf.float32, shape=(), name='dropout_keep_prob')
-                output = tf.nn.dropout(output, self.dropout)
+        before_dropout = output
 
-            self.register_stat_summary(tf.summary.histogram('weights', self.weights))
-            self.register_stat_summary(tf.summary.histogram('bias', self.bias))
+        if self.dropout_keep_prob:
+            self.dropout = tf.placeholder(tf.float32, shape=(), name='dropout_keep_prob')
+            output = tf.nn.dropout(output, self.dropout)
 
-            # self.register_train_summary(
-            #     executor.Executor.histogram_summary('train_output', before_dropout))
-            # self.register_test_summary(
-            #     executor.Executor.histogram_summary('test_output', before_dropout))
+        self.register_stat_summary(tf.summary.histogram('weights', self.weights))
+        self.register_stat_summary(tf.summary.histogram('bias', self.bias))
+
+        if False:  # TODO
+            self.register_train_summary(tf.summary.histogram('train_output', before_dropout))
+            self.register_test_summary(tf.summary.histogram('test_output', before_dropout))
 
         return output
 

@@ -1,13 +1,16 @@
 import tensorflow as tf
 
 from krinnet import utils
-from krinnet import layers
 from krinnet import ops
+from krinnet.layers import base
 
 
-class FullyConnectedLayer(layers.BaseLayer):
+class FullyConnectedLayer(base.BaseHiddenLayer):
     default_w_initializer = tf.contrib.layers.xavier_initializer
     default_b_initializer = .1
+
+    layer_basename = 'fc_layer'
+    n_dimensions = 2
 
     def __init__(self, layer_size, activation=None, layer_name=None,
                  weights_initializer=None, bias_initializer=None, dropout_keep_prob=None,
@@ -29,36 +32,37 @@ class FullyConnectedLayer(layers.BaseLayer):
         self.dropout = None
         super(FullyConnectedLayer, self).__init__(layer_name=layer_name)
 
-    def build(self, layer_i, input_tensor):
-        self.layer_name = self.layer_name or 'fc_layer_{}'.format(layer_i)
+    def build(self, input_tensor, layer_i=None):
+        input_tensor = self.build_input_tensor_dimensionality(input_tensor)
 
-        with self.scope() as scope:
-            input_tensor = self.ensure_input_tensor_dimensionality(input_tensor, 2)
+        self.weights = tf.get_variable(
+            'W', shape=(input_tensor.shape[1], self.layer_size),
+            dtype=tf.float32,
+            initializer=self.weights_initializer)
 
-            self.weights = tf.get_variable(
-                'W', shape=(input_tensor.shape[1], self.layer_size),
-                dtype=tf.float32,
-                initializer=self.weights_initializer)
+        self.bias = tf.get_variable(
+            'b', shape=self.layer_size, dtype=tf.float32,
+            initializer=self.bias_initializer)
 
-            self.bias = tf.get_variable(
-                'b', shape=self.layer_size, dtype=tf.float32,
-                initializer=self.bias_initializer)
+    def apply(self, input_tensor):
+        input_tensor = self.verify_input_tensor_dimensionality(input_tensor)
 
-            output = ops.fully_connected(
-                input_tensor, self.layer_size, scope, activation=self.activation,
-                weights=self.weights, bias=self.bias)
+        output = ops.fully_connected(
+            input_tensor, self.layer_size, activation=self.activation,
+            weights=self.weights, bias=self.bias)
 
-            before_dropout = output
+        before_dropout = output
 
-            if self.dropout_keep_prob:
-                self.dropout = tf.placeholder(tf.float32, shape=(), name='dropout_keep_prob')
-                output = tf.nn.dropout(output, self.dropout)
+        if self.dropout_keep_prob:
+            self.dropout = tf.placeholder(tf.float32, shape=(), name='dropout_keep_prob')
+            output = tf.nn.dropout(output, self.dropout)
 
-            self.register_stat_summary(tf.summary.histogram('weights', self.weights))
-            self.register_stat_summary(tf.summary.histogram('bias', self.bias))
+        self.register_stat_summary(tf.summary.histogram('weights', self.weights))
+        self.register_stat_summary(tf.summary.histogram('bias', self.bias))
 
-            # self.register_train_summary(executor.Executor.histogram_summary('train_output', before_dropout))
-            # self.register_test_summary(executor.Executor.histogram_summary('test_output', before_dropout))
+        if False:  # TODO
+            self.register_train_summary(tf.summary.histogram('train_output', before_dropout))
+            self.register_test_summary(tf.summary.histogram('test_output', before_dropout))
 
         return output
 

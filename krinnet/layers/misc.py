@@ -23,14 +23,14 @@ class InputLayer(base.BaseInputLayer):
         return {self.input_placeholder: context.X}
 
 
-class Reshape(base.BaseLayer):
+class Reshape(base.BaseHiddenLayer):
     def __init__(self, shape, layer_name=None):
         self.shape = shape
         self.original_shape = None
         super(Reshape, self).__init__(layer_name=layer_name)
 
-    def build(self, layer_i, input_tensor):
-        self.layer_name = self.layer_name or 'reshape_{}'.format(layer_i)
+    def build_and_apply(self, input_tensor, layer_i=None):
+        self.build_name(layer_i=layer_i)
 
         with self.scope():
             self.original_shape = tf.shape(input_tensor)
@@ -41,7 +41,7 @@ class Reshape(base.BaseLayer):
             return tf.reshape(input_tensor, self.original_shape)
 
 
-class MaxPoolLayer(base.BaseLayer):
+class MaxPoolLayer(base.BaseHiddenLayer):
     def __init__(self, size_shortcut=None, size=None, layer_name=None):
         if size_shortcut:
             size = [1, size_shortcut, size_shortcut, 1]
@@ -52,8 +52,8 @@ class MaxPoolLayer(base.BaseLayer):
         self.size = size
         super(MaxPoolLayer, self).__init__(layer_name=layer_name)
 
-    def build(self, layer_i, input_tensor):
-        self.layer_name = self.layer_name or 'max_pool_layer_{}'.format(layer_i)
+    def build_and_apply(self, input_tensor, layer_i=None):
+        self.build_name(layer_i=layer_i)
 
         with self.scope():
             input_tensor = utils.ensure_tensor_dimensionality(input_tensor, 4)

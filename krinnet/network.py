@@ -61,7 +61,7 @@ class BaseNetwork(object):
 
     def build_hidden_layers(self, current_tensor):
         for layer_i, layer in enumerate(self.layers):
-            current_tensor = layer.build(layer_i, current_tensor)
+            current_tensor = layer.build_and_apply(current_tensor, layer_i=layer_i)
 
         return current_tensor
 
