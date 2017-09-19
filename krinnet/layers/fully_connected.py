@@ -6,7 +6,7 @@ from krinnet import ops
 
 
 class FullyConnectedLayer(layers.BaseLayer):
-    default_w_initializer = tf.truncated_normal_initializer()
+    default_w_initializer = tf.contrib.layers.xavier_initializer
     default_b_initializer = .1
 
     def __init__(self, layer_size, activation=None, layer_name=None,
