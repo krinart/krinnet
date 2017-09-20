@@ -35,22 +35,23 @@ class Conv2DLayer(base.BaseHiddenLayer):
         self.input_shape = None
         super(Conv2DLayer, self).__init__(layer_name=layer_name)
 
-    def build(self, input_tensor, layer_i=None):
-        input_tensor = self.build_input_tensor_dimensionality(input_tensor)
+    def build(self, input_tensor):
+        with self.scope():
+            self.weights = tf.get_variable(
+                'W', shape=self.filter_size,
+                dtype=tf.float32,
+                initializer=self.weights_initializer)
 
-        self.weights = tf.get_variable(
-            'W', shape=self.filter_size,
-            dtype=tf.float32,
-            initializer=self.weights_initializer)
+            self.bias = tf.get_variable(
+                'b', shape=self.filter_size[-1], dtype=tf.float32,
+                initializer=self.bias_initializer)
 
-        self.bias = tf.get_variable(
-            'b', shape=self.filter_size[-1], dtype=tf.float32,
-            initializer=self.bias_initializer)
-
-        self.input_shape = tf.stack([tf.shape(input_tensor)[0]] + input_tensor.shape.as_list()[1:])
+            return self
 
     def apply(self, input_tensor):
-        input_tensor = self.verify_input_tensor_dimensionality(input_tensor)
+        input_tensor = utils.ensure_tensor_dimensionality(input_tensor, self.n_dimensions)
+
+        self.input_shape = tf.stack([tf.shape(input_tensor)[0]] + input_tensor.shape.as_list()[1:])
 
         output = tf.nn.conv2d(
             input_tensor, self.weights, strides=self.strides, padding='SAME')

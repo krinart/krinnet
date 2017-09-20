@@ -24,6 +24,8 @@ class InputLayer(base.BaseInputLayer):
 
 
 class Reshape(base.BaseHiddenLayer):
+    layer_basename = 'reshape'
+
     def __init__(self, shape, layer_name=None):
         self.shape = shape
         self.original_shape = None
@@ -42,6 +44,8 @@ class Reshape(base.BaseHiddenLayer):
 
 
 class MaxPoolLayer(base.BaseHiddenLayer):
+    layer_basename = 'maxpool'
+
     def __init__(self, size_shortcut=None, size=None, layer_name=None):
         if size_shortcut:
             size = [1, size_shortcut, size_shortcut, 1]

@@ -67,7 +67,7 @@ class AppliableLayer(BuildableLayer):
         self.build_name(*args, **kwargs)
 
         with self.scope():
-            self.build(input_tensor, *args, **kwargs)
+            self.build(input_tensor)
             return self.apply(input_tensor)
 
 
@@ -84,28 +84,31 @@ class BaseHiddenLayer(AppliableLayer):
     def __init__(self, *args, **kwargs):
         super(BaseHiddenLayer, self).__init__(*args, **kwargs)
 
-        self.input_tensor_shape = None
-        self.input_tensor_shape_list = None
+        self.input_tensor_shape = None       # This has -1 for wildcard dimension
+        self.input_tensor_shape_list = None  # This has None for wildcard dimension
 
     def build_name(self, layer_i=None):
         self.layer_name = self.layer_name or '{}_{}'.format(self.layer_basename, layer_i)
 
-    def build_input_tensor_dimensionality(self, tensor):
+    def build_input_tensor_dimensionality(self, tensor=None, shape=None):
         assert self.n_dimensions, 'n_dimensions is not set'
 
         if self.input_tensor_shape is not None:
             raise RuntimeError(
                 'input_tensor_shape is already set for layer {}'.format(self.layer_name))
 
-        self.input_tensor_shape = tf.shape(tensor)
-        self.input_tensor_shape_list = tensor.shape.as_list()
+        shape = shape or tensor.shape.as_list()
 
-        # TODO: find a way not to reshape tensor, since we only need to know tensor's shape
-        return utils.ensure_tensor_dimensionality(tensor, self.n_dimensions)
+        self.input_tensor_shape = [(s or -1) for s in shape]
+        self.input_tensor_shape_list = list(shape)
+
+        return utils.cast_shape_to_dimensionality(shape, self.n_dimensions)
 
     def verify_input_tensor_dimensionality(self, input_tensor):
         if self.input_tensor_shape_list != input_tensor.shape.as_list():
-            raise ValueError("Tensors' shape during building and applying are different")
+            raise ValueError(
+                "Tensors' shape during building and applying are different: build={}, "
+                "shape={}".format(self.input_tensor_shape_list, input_tensor.shape.as_list()))
 
         return utils.ensure_tensor_dimensionality(input_tensor, self.n_dimensions)
 

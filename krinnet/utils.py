@@ -19,7 +19,26 @@ def ensure_tensor_dimensionality(tensor, n_dimensions):
         new_dim = reduce(operator.mul, filter(None, [d.value for d in tensor.shape]), 1)
         return tf.reshape(tensor, (-1, new_dim))
 
-    raise ValueError('Not supported. tensor dimensionality={}'.format(len(tensor.shape)))
+    raise ValueError(
+        'Not supported: tensor.shape={}, n_dimensions={}'.format(tensor.shape, n_dimensions))
+
+
+def cast_shape_to_dimensionality(shape, n_dimensions):
+    shape = list(shape)
+
+    current_n_dimensions = len(shape)
+
+    if current_n_dimensions == n_dimensions:
+        return shape
+
+    if n_dimensions == current_n_dimensions + 1:
+        return shape + [1]
+
+    if n_dimensions == 2:
+        new_dim = reduce(operator.mul, filter(None, shape), 1)
+        return [-1, new_dim]
+
+    raise ValueError('Not supported: shape={}, n_dimensions={}'.format(shape, n_dimensions))
 
 
 def train_test_split(X, Y, test_size=.2, use_examples_num=None, random_state=None):
