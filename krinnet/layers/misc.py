@@ -4,6 +4,7 @@ from krinnet import utils
 from krinnet.layers import base
 
 
+# TODO: introduce ImageInputLayer
 class InputLayer(base.BaseInputLayer):
     def __init__(self):
         self.input_placeholder = None
@@ -12,7 +13,9 @@ class InputLayer(base.BaseInputLayer):
     def build(self, training_data, training_labels):
 
         with self.scope():
-            self.input_placeholder = tf.placeholder(tf.float32, shape=(None, training_data.shape[1]), name='X')
+            # TODO: handle dimensions more properly, currently dimensions after second simply lost
+            self.input_placeholder = tf.placeholder(
+                tf.float32, shape=(None, training_data.shape[1]), name='X')
 
         return self.input_placeholder
 

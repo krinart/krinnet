@@ -37,10 +37,8 @@ class Conv2DLayer(base.BaseHiddenLayer):
 
     def build(self, input_tensor=None, input_shape=None):
         with self.scope():
-            input_shape = self.build_input_tensor_dimensionality(
+            self.input_shape = self.build_input_tensor_dimensionality(
                 tensor=input_tensor, shape=input_shape)
-
-            self.input_shape = input_shape
 
             self.weights = tf.get_variable(
                 'W', shape=self.filter_size,

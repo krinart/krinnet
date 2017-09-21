@@ -119,6 +119,7 @@ class ClassifierNetwork(BaseNetwork):
         return loss_tensor, loss_layer
 
 
+# TODO: this network should now about image size
 class AutoEncoder(BaseNetwork):
     def __init__(self, layers):
         self.encoded_tensor = None  # actual encoded input

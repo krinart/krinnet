@@ -74,6 +74,7 @@ class AutoEncoderLossLayer(layers.BaseLossLayer):
             self.register_train_summary(tf.summary.scalar('train_loss', loss))
             self.register_test_summary(tf.summary.scalar('test_loss', loss))
 
+            # TODO: this should not be here, probably in the network
             self.register_test_summary(
                 tf.summary.image(
                     'input', tf.reshape(input_tensor, [-1, 28, 28, 1])))
