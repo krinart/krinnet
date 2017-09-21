@@ -60,7 +60,7 @@ class Reporter(object):
         return self.write_summary(
             step,
             self.test_summaries,
-            feed_dict=self.net.get_train_feed(context=run_context),
+            feed_dict=self.net.get_test_feed(context=run_context),
             return_accuracy=return_accuracy,
             return_error=return_error)
 
