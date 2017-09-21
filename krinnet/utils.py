@@ -104,3 +104,14 @@ def initialize_variable(initializer, default_initializer, random_state=None):
             pass
 
     return initializer
+
+
+def linear_image_transform(source, target, steps=10):
+    diff = target - source
+    step_diff = diff / steps
+
+    images = []
+    for step in range(steps+1):
+        images.append(source + step_diff*step)
+
+    return images

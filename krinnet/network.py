@@ -1,5 +1,8 @@
+import numpy as np
+
 from krinnet import context
 from krinnet import layers
+from krinnet import utils
 
 
 class BaseNetwork(object):
@@ -89,9 +92,11 @@ class BaseNetwork(object):
     def get_loss_tensor(self):
         return self.loss_tensor
 
-    def _run_test(self, fetches, X=None, Y=None):
+    def _run_test(self, fetches, X=None, Y=None, **extra_feed_dict):
         run_context = context.Context(X=X, Y=Y)
-        return self.executor.run(fetches, feed_dict=self.get_test_feed(run_context))
+        feed_dict = self.get_test_feed(run_context)
+        feed_dict.update(extra_feed_dict)
+        return self.executor.run(fetches, feed_dict=feed_dict)
 
     def _run_train(self, fetches, X=None, Y=None):
         run_context = context.Context(X=X, Y=Y)
@@ -131,6 +136,37 @@ class AutoEncoder(BaseNetwork):
         loss_layer = layers.AutoEncoderLossLayer()
         loss_tensor = loss_layer.build(output_tensor, self)
         return loss_tensor, loss_layer
+
+    def encode(self, *images):
+        return self._run_test(self.encoded_tensor, X=np.stack(images))
+
+    def decode(self, *tensors):
+        shape = self.encoded_tensor.shape.as_list()[1:]
+
+        return self.executor.run(
+            self.output_tensor,
+            feed_dict={
+                self.encoded_tensor: np.stack(t.reshape(shape) for t in tensors),
+            })
+
+    def transform(self, source, target, steps=10):
+        # First encode each image into latent vectors
+        encoded_src, encoded_tgt = self.encode(source.reshape(-1), target.reshape(-1))
+
+        # Get transformations for each step
+        transformations = utils.linear_image_transform(encoded_src, encoded_tgt, steps=steps)
+
+        # Decode each step
+        decoded_transofrmations = self.decode(*transformations)
+
+        return decoded_transofrmations.reshape(-1, 28, 28).clip(min=0, max=1)
+
+    def transform_to_gif(self, image_name, source, target, steps=10):
+        import imageio
+
+        images = self.transform(source, target, steps=steps)
+
+        imageio.mimsave(image_name, images)
 
 
 class SimpleGenerativeNetwork(BaseNetwork):

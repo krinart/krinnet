@@ -35,12 +35,12 @@ class Reshape(base.BaseHiddenLayer):
         self.build_name(layer_i=layer_i)
 
         with self.scope():
-            self.original_shape = tf.shape(input_tensor)
+            self.original_shape = input_tensor.shape.as_list()
             return tf.reshape(input_tensor, [-1] + list(self.shape))
 
     def apply_reverse(self, input_tensor):
         with self.reverse_scope():
-            return tf.reshape(input_tensor, self.original_shape)
+            return tf.reshape(input_tensor, tf.stack([-1] + self.original_shape[1:]))
 
 
 class MaxPoolLayer(base.BaseHiddenLayer):

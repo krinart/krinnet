@@ -84,8 +84,8 @@ class BaseHiddenLayer(AppliableLayer):
     def __init__(self, *args, **kwargs):
         super(BaseHiddenLayer, self).__init__(*args, **kwargs)
 
-        self.input_tensor_shape = None       # This has -1 for wildcard dimension
-        self.input_tensor_shape_list = None  # This has None for wildcard dimension
+        self.input_tensor_shape = None       # Has -1 for wildcard dimension
+        self.input_tensor_shape_list = None  # Has None for wildcard dimension
 
     def build_name(self, layer_i=None):
         self.layer_name = self.layer_name or '{}_{}'.format(self.layer_basename, layer_i)
@@ -98,17 +98,18 @@ class BaseHiddenLayer(AppliableLayer):
                 'input_tensor_shape is already set for layer {}'.format(self.layer_name))
 
         shape = shape or tensor.shape.as_list()
-
-        self.input_tensor_shape = [(s or -1) for s in shape]
         self.input_tensor_shape_list = list(shape)
 
-        return utils.cast_shape_to_dimensionality(shape, self.n_dimensions)
+        valid_shape = utils.cast_shape_to_dimensionality(shape, self.n_dimensions)
+        self.input_tensor_shape = [(s or -1) for s in valid_shape]
+
+        return valid_shape
 
     def verify_input_tensor_dimensionality(self, input_tensor):
         if self.input_tensor_shape_list != input_tensor.shape.as_list():
             raise ValueError(
                 "Tensors' shape during building and applying are different: build={}, "
-                "shape={}".format(self.input_tensor_shape_list, input_tensor.shape.as_list()))
+                "apply={}".format(self.input_tensor_shape_list, input_tensor.shape.as_list()))
 
         return utils.ensure_tensor_dimensionality(input_tensor, self.n_dimensions)
 

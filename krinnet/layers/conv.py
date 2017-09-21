@@ -35,8 +35,13 @@ class Conv2DLayer(base.BaseHiddenLayer):
         self.input_shape = None
         super(Conv2DLayer, self).__init__(layer_name=layer_name)
 
-    def build(self, input_tensor):
+    def build(self, input_tensor=None, input_shape=None):
         with self.scope():
+            input_shape = self.build_input_tensor_dimensionality(
+                tensor=input_tensor, shape=input_shape)
+
+            self.input_shape = input_shape
+
             self.weights = tf.get_variable(
                 'W', shape=self.filter_size,
                 dtype=tf.float32,
@@ -49,9 +54,7 @@ class Conv2DLayer(base.BaseHiddenLayer):
             return self
 
     def apply(self, input_tensor):
-        input_tensor = utils.ensure_tensor_dimensionality(input_tensor, self.n_dimensions)
-
-        self.input_shape = tf.stack([tf.shape(input_tensor)[0]] + input_tensor.shape.as_list()[1:])
+        input_tensor = self.verify_input_tensor_dimensionality(input_tensor)
 
         output = tf.nn.conv2d(
             input_tensor, self.weights, strides=self.strides, padding='SAME')
@@ -85,7 +88,8 @@ class Conv2DLayer(base.BaseHiddenLayer):
 
             output = tf.nn.bias_add(input_tensor, tf.negative(self.bias))
 
-            output = tf.nn.conv2d_transpose(output, self.weights, output_shape=self.input_shape,
+            output_shape = tf.stack([tf.shape(input_tensor)[0]] + self.input_shape[1:])
+            output = tf.nn.conv2d_transpose(output, self.weights, output_shape=output_shape,
                                             strides=self.strides, padding='SAME')
 
             if self.activation:
