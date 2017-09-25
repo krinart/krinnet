@@ -63,16 +63,16 @@ class AppliableLayer(BuildableLayer):
     def apply(self, input_tensor):
         raise NotImplementedError
 
-    def build_and_apply(self, input_tensor, *args, **kwargs):
-        self.build_name(*args, **kwargs)
+    def build_and_apply(self, input_tensor, layer_i=None):
+        self.build_name(layer_i=layer_i)
 
         with self.scope():
-            self.build(input_tensor)
+            self.build(input_shape=input_tensor.shape.as_list())
             return self.apply(input_tensor)
 
 
 class BaseInputLayer(BuildableLayer):
-    def build(self, training_data, training_labels):
+    def build(self, data_shape):
         raise NotImplementedError
 
 
@@ -90,15 +90,16 @@ class BaseHiddenLayer(AppliableLayer):
     def build_name(self, layer_i=None):
         self.layer_name = self.layer_name or '{}_{}'.format(self.layer_basename, layer_i)
 
-    def build_input_tensor_dimensionality(self, tensor=None, shape=None):
+    def build_input_tensor_dimensionality(self, shape):
+        assert shape[0] is None, 'Shape[0] should be None, actual shape: {}'.format(shape)
         assert self.n_dimensions, 'n_dimensions is not set'
 
         if self.input_tensor_shape is not None:
             raise RuntimeError(
                 'input_tensor_shape is already set for layer {}'.format(self.layer_name))
 
-        shape = shape or tensor.shape.as_list()
-        self.input_tensor_shape_list = list(shape)
+        shape = list(shape)
+        self.input_tensor_shape_list = shape
 
         valid_shape = utils.cast_shape_to_dimensionality(shape, self.n_dimensions)
         self.input_tensor_shape = [(s or -1) for s in valid_shape]

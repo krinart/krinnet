@@ -1,21 +1,41 @@
+import os
+
+import shutil
 import tensorflow as tf
 
 from krinnet import context
 
 
 class Reporter(object):
-    def __init__(self, executor, net, summary_logdir, clean_logdir=False, summary_step=5):
-        self.executor = executor
+    def __init__(self, net, summary_logdir, clean_logdir=False, summary_step=5,
+                 print_accuracy_step=None, print_error_step=None):
         self.net = net
         self.summary_logdir = summary_logdir
         self.clean_logdir = clean_logdir
+
+        if print_accuracy_step is not None and print_accuracy_step < summary_step:
+            raise ValueError('print_accuracy_step ({}) can not be < step ({})'.format(
+                print_accuracy_step, summary_step))
+        if print_error_step is not None and print_error_step < summary_step:
+            raise ValueError('print_error_step ({}) can not be < step ({})'.format(
+                print_error_step, summary_step))
         self.summary_step = summary_step
+        self.print_accuracy_step = print_accuracy_step
+        self.print_error_step = print_error_step
 
         self.train_summaries = self.net.train_summaries and tf.summary.merge(
             self.net.train_summaries)
 
         self.test_summaries = self.net.test_summaries and tf.summary.merge(self.net.test_summaries)
         self.stat_summaries = self.net.stat_summaries and tf.summary.merge(self.net.stat_summaries)
+
+        if self.summary_logdir:
+            if os.path.exists(summary_logdir):
+                if not clean_logdir:
+                    raise RuntimeError('Specified logdir {} already exists'.format(summary_logdir))
+                shutil.rmtree(summary_logdir)
+
+            self.summary_writer = tf.summary.FileWriter(summary_logdir)
 
     def write_summary(self, step, summary, feed_dict=None, return_accuracy=False,
                       return_error=False):
@@ -25,10 +45,11 @@ class Reporter(object):
         if return_error:
             evaluate_tensors.append('loss_layer/loss:0')
 
-        summary_value, *return_value = self.executor.run(
+        summary_value, *return_value = self.net.executor.run(
             [summary] + evaluate_tensors, feed_dict=feed_dict)
 
-        self.executor.write_summary(step, summary_value)
+        if self.summary_writer and summary_value:
+                self.summary_writer.add_summary(summary_value, step)
 
         accuracy, error = None, None
 
@@ -70,21 +91,12 @@ class Reporter(object):
 
         return self.write_summary(step, self.stat_summaries)
 
-    def step(self, step, X_train, X_test, Y_train=None, Y_test=None, print_accuracy_step=None,
-             print_error_step=None):
-        if print_accuracy_step is not None and print_accuracy_step < self.summary_step:
-            raise ValueError('print_accuracy_step ({}) can not be < step ({})'.format(
-                print_accuracy_step, self.summary_step))
-
-        if print_error_step is not None and print_error_step < self.summary_step:
-            raise ValueError('print_error_step ({}) can not be < step ({})'.format(
-                print_error_step, self.summary_step))
-
+    def step(self, step, X_train, X_test, Y_train=None, Y_test=None):
         if step % self.summary_step != 0:
             return
 
-        print_accuracies = print_accuracy_step and (step % print_accuracy_step == 0)
-        print_error = print_error_step and (step % print_error_step == 0)
+        print_accuracies = self.print_accuracy_step and (step % self.print_accuracy_step == 0)
+        print_error = self.print_error_step and (step % self.print_error_step == 0)
 
         train_accuracy, train_error = self.write_train_summary(
             step, X=X_train, Y=Y_train, return_accuracy=print_accuracies, return_error=print_error)

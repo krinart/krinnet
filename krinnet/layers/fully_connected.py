@@ -32,14 +32,9 @@ class FullyConnectedLayer(base.BaseHiddenLayer):
         self.dropout = None
         super(FullyConnectedLayer, self).__init__(layer_name=layer_name)
 
-    def build(self, input_tensor=None, input_shape=None):
-
-        assert (input_tensor is not None) or input_shape, (
-            'Either input_tensor or input_shape should be defined')
-
+    def build(self, input_shape):
         with self.scope():
-            input_shape = self.build_input_tensor_dimensionality(
-                tensor=input_tensor, shape=input_shape)
+            input_shape = self.build_input_tensor_dimensionality(shape=input_shape)
 
             self.weights = tf.get_variable(
                 'W', shape=(input_shape[1], self.layer_size),

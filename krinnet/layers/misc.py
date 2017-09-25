@@ -10,12 +10,15 @@ class InputLayer(base.BaseInputLayer):
         self.input_placeholder = None
         super(InputLayer, self).__init__(layer_name='input_layer')
 
-    def build(self, training_data, training_labels):
+    def build(self, input_shape):
+        assert len(input_shape) > 1, 'Input shape should '
+
+        input_shape = [None] + list(input_shape[1:])
 
         with self.scope():
             # TODO: handle dimensions more properly, currently dimensions after second simply lost
             self.input_placeholder = tf.placeholder(
-                tf.float32, shape=(None, training_data.shape[1]), name='X')
+                tf.float32, shape=input_shape, name='X')
 
         return self.input_placeholder
 
@@ -34,12 +37,12 @@ class Reshape(base.BaseHiddenLayer):
         self.original_shape = None
         super(Reshape, self).__init__(layer_name=layer_name)
 
-    def build_and_apply(self, input_tensor, layer_i=None):
-        self.build_name(layer_i=layer_i)
+    def build(self, *args, **kwargs):
+        pass
 
-        with self.scope():
-            self.original_shape = input_tensor.shape.as_list()
-            return tf.reshape(input_tensor, [-1] + list(self.shape))
+    def apply(self, input_tensor):
+        self.original_shape = input_tensor.shape.as_list()
+        return tf.reshape(input_tensor, [-1] + list(self.shape))
 
     def apply_reverse(self, input_tensor):
         with self.reverse_scope():
@@ -59,10 +62,9 @@ class MaxPoolLayer(base.BaseHiddenLayer):
         self.size = size
         super(MaxPoolLayer, self).__init__(layer_name=layer_name)
 
-    def build_and_apply(self, input_tensor, layer_i=None):
-        self.build_name(layer_i=layer_i)
+    def build(self, *args, **kwargs):
+        pass
 
-        with self.scope():
-            input_tensor = utils.ensure_tensor_dimensionality(input_tensor, 4)
-
-            return tf.nn.max_pool(input_tensor, self.size, strides=[1, 2, 2, 1], padding='SAME')
+    def apply(self, input_tensor):
+        input_tensor = utils.ensure_tensor_dimensionality(input_tensor, 4)
+        return tf.nn.max_pool(input_tensor, self.size, strides=[1, 2, 2, 1], padding='SAME')

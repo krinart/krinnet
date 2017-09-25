@@ -1,13 +1,17 @@
 import numpy as np
+import tensorflow as tf
 
 from krinnet import context
+from krinnet import executor as krn_executor
 from krinnet import layers
 from krinnet import utils
 
 
 class BaseNetwork(object):
-    def __init__(self, layers):
+    def __init__(self, layers, name=None):
         assert len(layers) > 0, 'Layers con not be empty'
+
+        self.name = name
 
         # Hidden layers, but not necessarily all of them.
         # In case of AutoEncoder only encoding layers, without decoding.
@@ -29,6 +33,7 @@ class BaseNetwork(object):
         # This one is probably a poor decision, but to make life more comfortable
         # it is good to save executor with full context (session, graph) in a net
         self.executor = None
+        self.minimizer = None
 
     def get_train_feed(self, context):
         feed_dict = {}
@@ -52,13 +57,13 @@ class BaseNetwork(object):
     def build_extra_layers(self, current_tensor):
         return current_tensor, []
 
-    def build_input_layer(self, X, Y):
+    def build_input_layer(self, input_shape):
         if isinstance(self.layers[0], layers.BaseInputLayer):
             input_layer = self.layers.pop(0)
         else:
             input_layer = layers.InputLayer()
 
-        current_tensor = input_layer.build(X, Y)
+        current_tensor = input_layer.build(input_shape)
 
         return input_layer, current_tensor
 
@@ -71,8 +76,22 @@ class BaseNetwork(object):
     def set_executor(self, executor):
         self.executor = executor
 
-    def build(self, X, Y):
-        self.input_layer, current_tensor = self.build_input_layer(X, Y)
+    def build(self, input_shape, optimizer=None, restore=False):
+        self.executor = krn_executor.Executor()
+
+        with self.executor.context:
+            self.build_layers(input_shape)
+
+            with tf.variable_scope('optimizer'):
+                self.minimizer = optimizer and optimizer.minimize(self.loss_tensor)
+
+        if restore:
+            self.restore_model()
+        else:
+            self.executor.initialize()
+
+    def build_layers(self, input_shape):
+        self.input_layer, current_tensor = self.build_input_layer(input_shape)
 
         current_tensor = self.build_hidden_layers(current_tensor)
 
@@ -102,14 +121,31 @@ class BaseNetwork(object):
         run_context = context.Context(X=X, Y=Y)
         return self.executor.run(fetches, feed_dict=self.get_train_feed(run_context))
 
-    def train_step(self, minimizer, X, Y=None):
-        return self._run_train(minimizer, X=X, Y=Y)
+    def train_step(self, X, Y=None):
+        assert self.minimizer, 'minimizer is not set'
+        return self._run_train(self.minimizer, X=X, Y=Y)
+
+    def save_model(self, path=None):
+        path = path or (self.name and 'models/{}/model.ckpt'.format(self.name))
+        assert path is not None, 'path is empty'
+
+        with self.executor.graph.as_default():
+            saver = tf.train.Saver()
+            saver.save(self.executor.session, path)
+
+    def restore_model(self, path=None):
+        path = path or (self.name and 'models/{}/model.ckpt'.format(self.name))
+        assert path is not None, 'path is empty'
+
+        with self.executor.graph.as_default():
+            saver = tf.train.Saver()
+            saver.restore(self.executor.session, path)
 
 
 class ClassifierNetwork(BaseNetwork):
-    def __init__(self, layers, multiclass=True):
+    def __init__(self, layers, multiclass=True, *args, **kwargs):
         self.multiclass = multiclass
-        super(ClassifierNetwork, self).__init__(layers)
+        super(ClassifierNetwork, self).__init__(layers, *args, **kwargs)
     
     def build_loss(self, output_tensor):
         loss_layer = layers.ClassifierLossLayer(
@@ -119,11 +155,11 @@ class ClassifierNetwork(BaseNetwork):
         return loss_tensor, loss_layer
 
 
-# TODO: this network should now about image size
+# TODO: this network should know about image size
 class AutoEncoder(BaseNetwork):
-    def __init__(self, layers):
+    def __init__(self, layers, *args, **kwargs):
         self.encoded_tensor = None  # actual encoded input
-        super(AutoEncoder, self).__init__(layers)
+        super(AutoEncoder, self).__init__(layers, *args, **kwargs)
 
     def build_extra_layers(self, current_tensor):
         self.encoded_tensor = current_tensor
