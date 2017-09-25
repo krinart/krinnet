@@ -126,20 +126,22 @@ class BaseNetwork(object):
         return self._run_train(self.minimizer, X=X, Y=Y)
 
     def save_model(self, path=None):
-        path = path or (self.name and 'models/{}/model.ckpt'.format(self.name))
+        path = path or (self.name and 'models/{}'.format(self.name))
         assert path is not None, 'path is empty'
+
+        path = utils.verify_path_is_empty(path)
 
         with self.executor.graph.as_default():
             saver = tf.train.Saver()
-            saver.save(self.executor.session, path)
+            saver.save(self.executor.session, path + '/model.ckpt')
 
     def restore_model(self, path=None):
-        path = path or (self.name and 'models/{}/model.ckpt'.format(self.name))
+        path = path or (self.name and 'models/{}'.format(self.name))
         assert path is not None, 'path is empty'
 
         with self.executor.graph.as_default():
             saver = tf.train.Saver()
-            saver.restore(self.executor.session, path)
+            saver.restore(self.executor.session, path + '/model.ckpt')
 
 
 class ClassifierNetwork(BaseNetwork):

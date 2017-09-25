@@ -1,6 +1,9 @@
 from functools import reduce
 import operator
+import os
+import sys
 
+import shutil
 import numpy as np
 import tensorflow as tf
 from sklearn import model_selection
@@ -115,3 +118,32 @@ def linear_image_transform(source, target, steps=10):
         images.append(source + step_diff*step)
 
     return images
+
+
+def is_interactive():
+    # https://stackoverflow.com/a/22424821/4929704
+    import __main__ as main
+    return not hasattr(main, '__file__')
+
+
+def verify_path_is_empty(path):
+    while os.path.exists(path):
+        if not is_interactive():
+            raise RuntimeError('Specified path {} already exists'.format(path))
+
+        new_path = input(
+            'Specified path {} exists. Provide new one or (q)uit or (d)elete existing?: '.format(
+                path))
+
+        if new_path == 'q':
+            print('Quit.')
+            sys.exit(1)
+
+        if new_path == 'd':
+            print('Remove path {}'.format(path))
+            shutil.rmtree(path)
+
+        else:
+            path = new_path
+
+    return path

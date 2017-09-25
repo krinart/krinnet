@@ -1,17 +1,15 @@
 import os
 
-import shutil
 import tensorflow as tf
 
 from krinnet import context
+from krinnet import utils
 
 
 class Reporter(object):
-    def __init__(self, net, summary_logdir, clean_logdir=False, summary_step=5,
+    def __init__(self, net, summary_logdir, summary_step=5,
                  print_accuracy_step=None, print_error_step=None):
         self.net = net
-        self.summary_logdir = summary_logdir
-        self.clean_logdir = clean_logdir
 
         if print_accuracy_step is not None and print_accuracy_step < summary_step:
             raise ValueError('print_accuracy_step ({}) can not be < step ({})'.format(
@@ -29,12 +27,8 @@ class Reporter(object):
         self.test_summaries = self.net.test_summaries and tf.summary.merge(self.net.test_summaries)
         self.stat_summaries = self.net.stat_summaries and tf.summary.merge(self.net.stat_summaries)
 
-        if self.summary_logdir:
-            if os.path.exists(summary_logdir):
-                if not clean_logdir:
-                    raise RuntimeError('Specified logdir {} already exists'.format(summary_logdir))
-                shutil.rmtree(summary_logdir)
-
+        if summary_logdir:
+            summary_logdir = utils.verify_path_is_empty(summary_logdir)
             self.summary_writer = tf.summary.FileWriter(summary_logdir)
 
     def write_summary(self, step, summary, feed_dict=None, return_accuracy=False,

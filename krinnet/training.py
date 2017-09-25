@@ -6,15 +6,14 @@ from krinnet import utils
 
 
 def train_nn(net, X, Y, epochs, learning_rate, optimizer_cls=tf.train.AdamOptimizer, batch_size=512,
-             random_state=None, summary_step=5, clean_logdir=False,
-             test_size=.2, use_examples_num=None, print_accuracy_step=None, print_error_step=None):
+             random_state=None, summary_step=5, test_size=.2, use_examples_num=None,
+             print_accuracy_step=None, print_error_step=None):
 
     net.build(input_shape=X.shape, optimizer=optimizer_cls(learning_rate))
 
     reporter = net.name and reporting.Reporter(
         net,
         summary_logdir='logs/{}'.format(net.name),
-        clean_logdir=clean_logdir,
         summary_step=summary_step,
         print_accuracy_step=print_accuracy_step,
         print_error_step=print_error_step,
