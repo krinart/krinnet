@@ -1,5 +1,3 @@
-import os
-
 import tensorflow as tf
 
 from krinnet import context
@@ -7,9 +5,13 @@ from krinnet import utils
 
 
 class Reporter(object):
-    def __init__(self, net, summary_logdir, summary_step=5,
-                 print_accuracy_step=None, print_error_step=None):
+    def __init__(self, net, X_train, X_test, summary_logdir, Y_train=None, Y_test=None,
+                 summary_step=5, print_accuracy_step=None, print_error_step=None):
         self.net = net
+        self.X_train = X_train
+        self.X_test = X_test
+        self.Y_train = Y_train
+        self.Y_test = Y_test
 
         if print_accuracy_step is not None and print_accuracy_step < summary_step:
             raise ValueError('print_accuracy_step ({}) can not be < step ({})'.format(
@@ -27,9 +29,9 @@ class Reporter(object):
         self.test_summaries = self.net.test_summaries and tf.summary.merge(self.net.test_summaries)
         self.stat_summaries = self.net.stat_summaries and tf.summary.merge(self.net.stat_summaries)
 
-        if summary_logdir:
-            summary_logdir = utils.verify_path_is_empty(summary_logdir)
-            self.summary_writer = tf.summary.FileWriter(summary_logdir)
+        summary_logdir = utils.verify_path_is_empty(summary_logdir)
+        self.summary_writer = tf.summary.FileWriter(summary_logdir)
+        self.summary_writer.add_graph(self.net.executor.graph)
 
     def write_summary(self, step, summary, feed_dict=None, return_accuracy=False,
                       return_error=False):
@@ -42,8 +44,8 @@ class Reporter(object):
         summary_value, *return_value = self.net.executor.run(
             [summary] + evaluate_tensors, feed_dict=feed_dict)
 
-        if self.summary_writer and summary_value:
-                self.summary_writer.add_summary(summary_value, step)
+        if summary_value:
+            self.summary_writer.add_summary(summary_value, step)
 
         accuracy, error = None, None
 
@@ -85,7 +87,7 @@ class Reporter(object):
 
         return self.write_summary(step, self.stat_summaries)
 
-    def step(self, step, X_train, X_test, Y_train=None, Y_test=None):
+    def step(self, step):
         if step % self.summary_step != 0:
             return
 
@@ -93,9 +95,13 @@ class Reporter(object):
         print_error = self.print_error_step and (step % self.print_error_step == 0)
 
         train_accuracy, train_error = self.write_train_summary(
-            step, X=X_train, Y=Y_train, return_accuracy=print_accuracies, return_error=print_error)
+            step, X=self.X_train, Y=self.Y_train, return_accuracy=print_accuracies,
+            return_error=print_error)
+
         test_accuracy, test_error = self.write_test_summary(
-            step, X=X_test, Y=Y_test, return_accuracy=print_accuracies, return_error=print_error)
+            step, X=self.X_test, Y=self.Y_test, return_accuracy=print_accuracies,
+            return_error=print_error)
+
         self.write_stat_summary(step)
 
         if print_accuracies and (train_accuracy is not None or test_accuracy is not None):

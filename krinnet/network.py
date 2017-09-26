@@ -5,6 +5,7 @@ from krinnet import context
 from krinnet import executor as krn_executor
 from krinnet import layers
 from krinnet import utils
+from krinnet import nb_utils
 
 
 class BaseNetwork(object):
@@ -142,6 +143,9 @@ class BaseNetwork(object):
         with self.executor.graph.as_default():
             saver = tf.train.Saver()
             saver.restore(self.executor.session, path + '/model.ckpt')
+
+    def show_graph(self):
+        nb_utils.show_graph(self.executor.graph)
 
 
 class ClassifierNetwork(BaseNetwork):

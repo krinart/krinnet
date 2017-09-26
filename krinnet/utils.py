@@ -1,3 +1,4 @@
+import contextlib
 from functools import reduce
 import operator
 import os
@@ -131,19 +132,27 @@ def verify_path_is_empty(path):
         if not is_interactive():
             raise RuntimeError('Specified path {} already exists'.format(path))
 
-        new_path = input(
-            'Specified path {} exists. Provide new one or (q)uit or (d)elete existing?: '.format(
-                path))
+        response = input(
+            'Path {} exists. Provide new one, (c)ontinue, (q)uit or (d)elete existing?: '.format(
+                path)).lower()
 
-        if new_path == 'q':
+        if response == 'c':
+            return path
+        if response == 'q':
             print('Quit.')
             sys.exit(1)
-
-        if new_path == 'd':
+        if response == 'd':
             print('Remove path {}'.format(path))
             shutil.rmtree(path)
-
         else:
-            path = new_path
+            path = response
 
     return path
+
+
+@contextlib.contextmanager
+def catch_keyboard_interrupted(output='Aborted'):
+    try:
+        yield
+    except KeyboardInterrupt:
+        print(output)

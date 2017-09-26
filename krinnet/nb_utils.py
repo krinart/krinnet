@@ -6,7 +6,7 @@ import numpy as np
 from IPython.display import display, HTML
 
 
-def show_graph(graph_def, rename_nodes=False):
+def show_graph(graph_def, rename_nodes=False, skip_save_nodes=True):
     # Helper functions for TF Graph visualization
     def _strip_consts(graph_def, max_const_size=32):
         """Strip large constant values from graph_def."""
@@ -24,8 +24,13 @@ def show_graph(graph_def, rename_nodes=False):
     def _rename_nodes(graph_def, rename_func):
         res_def = tf.GraphDef()
         for n0 in graph_def.node:
+
+            if skip_save_nodes and n0.name.startswith('save'):
+                continue
+
             n = res_def.node.add()
             n.MergeFrom(n0)
+
             n.name = rename_func(n.name)
             for i, s in enumerate(n.input):
                 n.input[i] = rename_func(s) if s[0] != '^' else '^' + rename_func(s[1:])
