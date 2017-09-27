@@ -8,6 +8,7 @@ from krinnet import utils
 class Executor(object):
     def __init__(self, model_name):
         self.model_name = model_name
+        self.path = 'models/{}/model.ckpt'.format(model_name)
         self.graph = tf.Graph()
         self.session = tf.Session(graph=self.graph)
 
@@ -27,22 +28,22 @@ class Executor(object):
     def run(self, fetches, feed_dict=None):
         return self.session.run(fetches, feed_dict=feed_dict)
 
-    def save_model(self, path, force=False):
-        if not force:
-            path = utils.verify_path_is_empty(path)
+    def save_model(self, force=False):
+        # if not force:
+        #     path = utils.verify_path_is_empty(self.path)
 
         with self.context():
             saver = tf.train.Saver()
-            saver.save(self.session, '{}/{}.ckpt'.format(path, self.model_name))
+            saver.save(self.session, self.path)
 
-        return path
+        return self.path
 
-    def restore_model(self, path):
+    def restore_model(self):
         with self.context():
             saver = tf.train.Saver()
-            saver.restore(self.session, '{}/{}.ckpt'.format(path, self.model_name))
+            saver.restore(self.session, self.path)
 
-        return path
+        return self.path
 
     def reset(self):
         with self.context():

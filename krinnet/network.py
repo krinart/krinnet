@@ -9,7 +9,7 @@ from krinnet import nb_utils
 
 
 class BaseNetwork(object):
-    def __init__(self, layers, name=None):
+    def __init__(self, layers, name):
         assert len(layers) > 0, 'Layers con not be empty'
 
         self.name = name
@@ -78,7 +78,7 @@ class BaseNetwork(object):
         self.executor = executor
 
     def build(self, input_shape, optimizer=None, restore=False):
-        self.executor = krn_executor.Executor(model_name='net')
+        self.executor = krn_executor.Executor(model_name=self.name)
 
         with self.executor.context():
             self.build_layers(input_shape)
@@ -126,17 +126,11 @@ class BaseNetwork(object):
         assert self.minimizer, 'minimizer is not set'
         return self._run_train(self.minimizer, X=X, Y=Y)
 
-    def save_model(self, path=None, force=False):
-        path = path or (self.name and 'models/{}'.format(self.name))
-        assert path is not None, 'path is empty'
+    def save_model(self, force=False):
+        return self.executor.save_model(force=force)
 
-        return self.executor.save_model(path, force=force)
-
-    def restore_model(self, path=None):
-        path = path or (self.name and 'models/{}'.format(self.name))
-        assert path is not None, 'path is empty'
-
-        return self.executor.restore_model(path)
+    def restore_model(self):
+        return self.executor.restore_model()
 
     def show_graph(self):
         nb_utils.show_graph(self.executor.graph)
