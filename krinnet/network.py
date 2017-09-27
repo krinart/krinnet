@@ -126,23 +126,17 @@ class BaseNetwork(object):
         assert self.minimizer, 'minimizer is not set'
         return self._run_train(self.minimizer, X=X, Y=Y)
 
-    def save_model(self, path=None):
+    def save_model(self, path=None, force=False):
         path = path or (self.name and 'models/{}'.format(self.name))
         assert path is not None, 'path is empty'
 
-        path = utils.verify_path_is_empty(path)
-
-        with self.executor.graph.as_default():
-            saver = tf.train.Saver()
-            saver.save(self.executor.session, path + '/model.ckpt')
+        return self.executor.save_model(path, model_name='net', force=force)
 
     def restore_model(self, path=None):
         path = path or (self.name and 'models/{}'.format(self.name))
         assert path is not None, 'path is empty'
 
-        with self.executor.graph.as_default():
-            saver = tf.train.Saver()
-            saver.restore(self.executor.session, path + '/model.ckpt')
+        return self.executor.restore_model(path, model_name='net')
 
     def show_graph(self):
         nb_utils.show_graph(self.executor.graph)

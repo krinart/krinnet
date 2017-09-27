@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from krinnet import utils
+
 
 class Executor(object):
     def __init__(self):
@@ -7,20 +9,27 @@ class Executor(object):
         self.session = tf.Session(graph=self.graph)
 
         self.context = self.graph.as_default()
-        self.summary_writer = None
 
     def initialize(self):
         with self.graph.as_default():
             self.session.run(tf.global_variables_initializer())
-            self.write_graph(self.graph)
 
     def run(self, fetches, feed_dict=None):
         return self.session.run(fetches, feed_dict=feed_dict)
 
-    def write_graph(self, graph):
-        if self.summary_writer:
-            self.summary_writer.add_graph(graph)
+    def save_model(self, path, model_name, force=False):
+        if not force:
+            path = utils.verify_path_is_empty(path)
 
-    def finalize(self):
-        if self.summary_writer:
-            self.summary_writer.flush()
+        with self.graph.as_default():
+            saver = tf.train.Saver()
+            saver.save(self.session, '{}/{}.ckpt'.format(path, model_name))
+
+        return path
+
+    def restore_model(self, path, model_name):
+        with self.graph.as_default():
+            saver = tf.train.Saver()
+            saver.restore(self.session, '{}/{}.ckpt'.format(path, model_name))
+
+        return path

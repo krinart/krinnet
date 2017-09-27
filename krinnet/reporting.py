@@ -119,3 +119,6 @@ class Reporter(object):
             if test_error is not None:
                 res.append('test_error={:.5f}'.format(test_error))
             print(', '.join(res))
+
+    def finalize(self):
+        self.summary_writer.flush()
