@@ -6,6 +6,7 @@ from krinnet.nb_utils import show_graph
 from krinnet.network import AutoEncoder
 from krinnet.network import ClassifierNetwork
 from krinnet.training import train_nn
+from krinnet.training import VarStore
 from krinnet.reporting import Reporter
 from krinnet.summary import BaseSummary
 from krinnet.summary import MontageImagesSummary

@@ -78,9 +78,9 @@ class BaseNetwork(object):
         self.executor = executor
 
     def build(self, input_shape, optimizer=None, restore=False):
-        self.executor = krn_executor.Executor()
+        self.executor = krn_executor.Executor(model_name='net')
 
-        with self.executor.context:
+        with self.executor.context():
             self.build_layers(input_shape)
 
             with tf.variable_scope('optimizer'):
@@ -130,13 +130,13 @@ class BaseNetwork(object):
         path = path or (self.name and 'models/{}'.format(self.name))
         assert path is not None, 'path is empty'
 
-        return self.executor.save_model(path, model_name='net', force=force)
+        return self.executor.save_model(path, force=force)
 
     def restore_model(self, path=None):
         path = path or (self.name and 'models/{}'.format(self.name))
         assert path is not None, 'path is empty'
 
-        return self.executor.restore_model(path, model_name='net')
+        return self.executor.restore_model(path)
 
     def show_graph(self):
         nb_utils.show_graph(self.executor.graph)
