@@ -21,9 +21,9 @@ class Executor(object):
     def initialize(self, *vars):
         with self.context():
             if vars:
-                self.session.run(tf.variables_initializer(vars))
+                self.run(tf.variables_initializer(vars))
             else:
-                self.session.run(tf.global_variables_initializer())
+                self.run(tf.global_variables_initializer())
 
     def run(self, fetches, feed_dict=None):
         return self.session.run(fetches, feed_dict=feed_dict)
@@ -44,7 +44,3 @@ class Executor(object):
             saver.restore(self.session, self.path)
 
         return self.path
-
-    def reset(self):
-        with self.context():
-            tf.reset_default_graph()

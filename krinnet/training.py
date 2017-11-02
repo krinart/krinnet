@@ -1,3 +1,5 @@
+import os
+import numpy as np
 import tensorflow as tf
 
 from tqdm import tqdm
@@ -7,17 +9,61 @@ from krinnet import utils
 from krinnet import storage
 
 
+def restore_train_state(net):
+    if not utils.is_interactive() or not os.path.exists('models/{}'.format(net.name)):
+        return 0
+
+    try:
+        state = storage.restore_values(
+            '{}_train_state'.format(net.name),
+            values_dict={
+                'global_step': tf.int32})
+    except storage.StorageError:
+        return 0
+
+    response = input('Restore state with global_step={}? (y)/n: '.format(state['global_step']))
+
+    if not response in ['y', 'yes', '']:
+        return 0
+
+    net.restore_model()
+    print('State restored')
+    return state['global_step']
+
+
+def save_train_state(net, global_step):
+    if not utils.is_interactive():
+        return
+
+    response = input('Finished. Save state? (y)/n: ').lower() or 'n'
+
+    if not response in ['y', 'yes', '']:
+        return
+
+    net.save_model(force=True)
+
+    storage.save_values(
+        '{}_train_state'.format(net.name),
+        values_dict={'global_step': (int(global_step), tf.int32)})
+
+
 def train_nn(net, X, Y, epochs, learning_rate, optimizer_cls=tf.train.AdamOptimizer, batch_size=512,
              random_state=None, summary_step=5, test_size=.2, use_examples_num=None,
              print_accuracy_step=None, print_error_step=None):
 
     net.build(input_shape=X.shape, optimizer=optimizer_cls(learning_rate))
 
-    X_train, X_test, Y_train, Y_test = utils.train_test_split(
+    train_idx, test_idx = utils.train_test_split(
         X, Y, test_size=test_size, use_examples_num=use_examples_num,
         random_state=random_state)
 
-    train_state = TrainState(net, X_train, X_test, Y_train, Y_test)
+    # global_step = restore_train_state(net)
+    global_step = 0
+
+    X_train = X[train_idx]
+    X_test = X[test_idx]
+    Y_train = Y[train_idx]
+    Y_test = Y[test_idx]
 
     reporter = reporting.Reporter(
         net, X_train, X_test, Y_train=Y_train, Y_test=Y_test,
@@ -32,63 +78,10 @@ def train_nn(net, X, Y, epochs, learning_rate, optimizer_cls=tf.train.AdamOptimi
             batches = utils.batch_iterator(X_train, Y_train, batch_size, random_state=random_state)
 
             for X_batch, Y_batch in batches:
-                train_state.train_step(X=X_batch, Y=Y_batch)
+                net.train_step(X=X_batch, Y=Y_batch)
 
-                reporter and reporter.step(train_state.global_step)
+                reporter.step(global_step)
+                global_step += 1
 
-    train_state.save()
+    # save_train_state(net, global_step)
     reporter.finalize()
-
-    return train_state
-
-
-class TrainState(object):
-
-    def __init__(self, net, X_train, X_test, Y_train, Y_test):
-        self.net = net
-        self.X_train = X_train
-        self.X_test = X_test
-        self.Y_train = Y_train
-        self.Y_test = Y_test
-
-        self.global_step = 0
-        self.storage = storage.VarStorage('{}_train_state'.format(net.name))
-
-        self.restore()
-
-    def train_step(self, X, Y=None):
-        self.net.train_step(X=X, Y=Y)
-        self.global_step += 1
-
-    def restore(self):
-        if not self.net.name or not utils.is_interactive():
-            return
-
-        try:
-            restored_state = self.storage.restore_values({'global_step': tf.int32})
-        except Exception as e:
-            print(type(e))
-            return
-
-        print(restored_state)
-
-        if 'global_step' in restored_state:
-            self.global_step = restored_state['global_step']
-            print('Restored global step: {}'.format(self.global_step))
-
-        # # TODO: this is horrible
-        # if not os.path.exists('models/{}'.format(self.net.name)):
-        #     return
-        #
-        # if input('Restore state? (n): ').lower() in ['y', 'yes']:
-        #     path = self.net.restore_model()
-
-    def save(self):
-        if not self.net.name or not utils.is_interactive():
-            return
-
-        response = input('Finished. Save state? (n): ') or 'n'
-
-        if response.lower() in ['y', 'yes']:
-            self.net.save_model(force=True)
-            self.storage.save_values({'global_step': (int(self.global_step), tf.int32)})

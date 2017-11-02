@@ -63,9 +63,8 @@ def train_test_split(X, Y, test_size=.2, use_examples_num=None, random_state=Non
     cv = model_selection.StratifiedShuffleSplit(
         n_splits=1, test_size=test_size, random_state=random_state)
     train_idx, test_idx = next(cv.split(X, np.argmax(Y, axis=1)))
-    X_train, X_test, Y_train, Y_test = X[train_idx], X[test_idx], Y[train_idx], Y[test_idx]
 
-    return X_train, X_test, Y_train, Y_test
+    return train_idx, test_idx
 
 
 def batch_iterator(X, Y, batch_size, random_state=None):
